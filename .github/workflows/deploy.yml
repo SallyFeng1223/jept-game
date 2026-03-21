@@ -50,8 +50,7 @@ jobs:
       - name: Install dependencies (Failsafe 防呆安裝)
         run: |
           npm install --no-audit --no-fund || true
-          npm install firebase lucide-react tailwindcss postcss autoprefixer vite @vitejs/plugin-react
-
+          npm install firebase lucide-react tailwindcss@3 postcss autoprefixer vite @vitejs/plugin-react
       - name: Build project
         run: npm run build || npx vite build
 
