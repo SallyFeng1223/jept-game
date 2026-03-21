@@ -2,7 +2,7 @@ name: Deploy React Game to GitHub Pages
 
 on:
   push:
-    branches: ['main'] # 當 main 分支有更新時自動觸發
+    branches: ['main']
 
 permissions:
   contents: read
@@ -12,10 +12,6 @@ permissions:
 concurrency:
   group: "pages"
   cancel-in-progress: true
-
-env:
-  # 依據 GitHub 官方政策，提前強制套件使用 Node.js 24 執行環境
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
@@ -27,32 +23,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Auto-fix Directory (防呆：解決上傳資料夾包覆問題)
-        run: |
-          if [ ! -f "package.json" ]; then
-            echo "找不到 package.json，開始自動搜尋子目錄並修復結構..."
-            SUB_DIR=$(find . -mindepth 1 -maxdepth 2 -name "package.json" -exec dirname {} \; | head -n 1)
-            if [ -n "$SUB_DIR" ]; then
-              echo "在 $SUB_DIR 找到專案檔案，正在將檔案移至最外層..."
-              shopt -s dotglob
-              mv "$SUB_DIR"/* .
-              rm -rf "$SUB_DIR"
-            else
-              echo "警告：未找到專案檔案！"
-            fi
-          fi
-
-      - name: Setup Node.js
+      - name: Setup Node.js (使用官方穩定版)
         uses: actions/setup-node@v4
         with:
-          node-version: 24 # 升級至官方最新支援的 Node.js 24
+          node-version: 20
 
-      - name: Install dependencies (Failsafe 防呆安裝)
+      - name: Install dependencies (精準安裝依賴)
         run: |
-          npm install --no-audit --no-fund || true
-          npm install firebase lucide-react tailwindcss@3 postcss autoprefixer vite @vitejs/plugin-react
+          npm install
+          npm install tailwindcss@3 postcss autoprefixer
+
       - name: Build project
-        run: npm run build || npx vite build
+        run: npm run build
+
+      - name: Verify dist folder (自動除錯檢查點)
+        run: |
+          echo "==== 檢查打包結果 ===="
+          ls -la dist || exit 1
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
