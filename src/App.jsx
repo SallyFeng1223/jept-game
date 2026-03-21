@@ -1,3 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, PlayCircle, Trophy, RefreshCw, Star, CheckCircle2, XCircle, Home, Upload, List, User, Download, HelpCircle } from 'lucide-react';
 
