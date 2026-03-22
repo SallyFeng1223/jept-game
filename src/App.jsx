@@ -216,19 +216,18 @@ export default function App() {
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
-        const usVoices = voices.filter(v => v.lang.includes('US') && v.lang.includes('en'));
-        const gbVoices = voices.filter(v => (v.lang.includes('GB') || v.lang.includes('UK')) && v.lang.includes('en'));
-
-        const mixed = [];
-        const maxLen = Math.max(usVoices.length, gbVoices.length);
+        // 嚴格過濾：必須是英文，且優先使用本地端 (localService) 語音，避免網路延遲導致的「快轉」現象
+        let safeVoices = voices.filter(v => v.lang.startsWith('en') && v.localService === true);
         
-        for (let i = 0; i < maxLen; i++) {
-          if (usVoices[i]) mixed.push(usVoices[i]);
-          if (gbVoices[i]) mixed.push(gbVoices[i]);
+        // 若設備無標示 localService 的語音 (如部分舊版 Android)，則退而求其次抓全部英文
+        if (safeVoices.length === 0) {
+          safeVoices = voices.filter(v => v.lang.startsWith('en'));
         }
-        
-        if (mixed.length === 0) mixed.push(...voices.filter(v => v.lang.startsWith('en')));
-        setVoicesPool(mixed);
+
+        // 剔除已知在 iOS/macOS 上品質極差的 "compact" 壓縮版機器人語音
+        safeVoices = safeVoices.filter(v => !v.name.toLowerCase().includes('compact'));
+
+        setVoicesPool(safeVoices);
       }
     };
 
@@ -246,27 +245,36 @@ export default function App() {
     if (savedName) setPlayerName(savedName);
   }, []);
 
-  const speakText = (text, rate = 0.85, seed = 0) => {
+  const speakText = (text, rate = 1.0, seed = 0) => { 
     if (!ttsSupported) return;
     try {
       window.speechSynthesis.cancel(); 
-      const utterance = new SpeechSynthesisUtterance(text);
       
-      if (voicesPool.length > 0) {
-        const selectedVoice = voicesPool[seed % voicesPool.length];
-        utterance.voice = selectedVoice;
-        utterance.lang = selectedVoice.lang;
-      } else {
-        utterance.lang = 'en-US'; 
-      }
+      // 導入 50 毫秒的微小延遲。根據蘋果 WebKit 引擎的已知行為，這能給予 iOS Safari 緩衝時間處理 cancel 動作，避免後續語音卡頓或變聲
+      setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        if (voicesPool.length > 0) {
+          // 為了確保手機端穩定性，行動裝置固定使用第一個高品質預設語音，不隨機輪替口音
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          const selectedVoice = isMobile ? voicesPool[0] : voicesPool[seed % voicesPool.length];
+          utterance.voice = selectedVoice;
+          utterance.lang = selectedVoice.lang;
+        } else {
+          utterance.lang = 'en-US'; 
+        }
 
-      utterance.rate = rate;    
-      
-      utterance.onstart = () => setIsPlayingAudio(true);
-      utterance.onend = () => setIsPlayingAudio(false);
-      utterance.onerror = () => setIsPlayingAudio(false);
+        // 強制將語速鎖定為 1.0，避免 Samsung TTS 等第三方引擎在非 1.0 狀態下觸發劣質的「時間拉伸 (Time-stretching)」演算法導致聲音金屬化
+        utterance.rate = 1.0; 
+        utterance.pitch = 1.0; 
+        
+        utterance.onstart = () => setIsPlayingAudio(true);
+        utterance.onend = () => setIsPlayingAudio(false);
+        utterance.onerror = () => setIsPlayingAudio(false);
 
-      window.speechSynthesis.speak(utterance);
+        window.speechSynthesis.speak(utterance);
+      }, 50);
+
     } catch (e) { setIsPlayingAudio(false); }
   };
 
