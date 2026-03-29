@@ -299,7 +299,7 @@ export default function App() {
     if (!currentQ) return null;
 
     const playMainQuestion = () => {
-      speakText(currentQ.playAllText, 0.85, currentQ.id);
+      speakText(currentQ.playAllText, 0.7, currentQ.id);
       if (!isTimerRunning && timeLeft === TIME_LIMIT && !feedback) setIsTimerRunning(true);
     };
 
@@ -350,7 +350,7 @@ export default function App() {
                     </span>
                     <span>{option}</span>
                   </div>
-                  <div className={`p-2 rounded-full transition-colors ${feedback ? 'hidden' : 'text-indigo-300 hover:text-indigo-600 hover:bg-indigo-100'}`} onClick={(e) => { e.stopPropagation(); speakText(currentQ.playOptionTexts[index], 0.85, currentQ.id); }}>
+                  <div className={`p-2 rounded-full transition-colors ${feedback ? 'hidden' : 'text-indigo-300 hover:text-indigo-600 hover:bg-indigo-100'}`} onClick={(e) => { e.stopPropagation(); speakText(currentQ.playOptionTexts[index], 0.7, currentQ.id); }}>
                     <Volume2 size={20} />
                   </div>
                 </button>
